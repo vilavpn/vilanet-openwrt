@@ -1,0 +1,108 @@
+name: 機能リクエスト（日本語）
+description: 具体的で評価可能な VilaNet OpenWrt クライアントの機能リクエストを送ります。
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **解決したい具体的なシナリオを明確に書いてください。曖昧なリクエストはクローズされます。**
+
+        「機能を追加して」「改善して」だけでは不十分です。機能領域、リクエスト種別、現在の問題、そして追加・変更してほしい**具体的な動作**を記入してください。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 機能領域
+      description: このリクエストはどの領域に属しますか？**プレースホルダーのままにせず、必ず手動で選択してください。**
+      options:
+        - "⚠️ 機能領域を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - 接続モード（global / rule）
+        - アカウント / ログイン
+        - DNS（dns_mode / bypass_china など）
+        - LAN 共有（LAN sharing）
+        - ルーティングとバイパス（bypass）
+        - LuCI ウェブ画面
+        - UCI 設定項目
+        - ubus / init.d
+        - 自動更新
+        - 診断とログ
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: リクエスト種別
+      description: どのような変更を希望しますか？**プレースホルダーのままにせず、必ず手動で選択してください。**
+      options:
+        - "⚠️ リクエスト種別を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - 新しい UCI 設定項目
+        - 新しい ubus メソッド
+        - 新しい LuCI コントロール
+        - 既存動作の改善
+        - ドキュメントの改善
+        - ルーター / アーキテクチャ対応の追加
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 現在の問題またはユースケース
+      description: 今、何が不便・不足・誤解を招きやすいですか？実際のシナリオを記入してください。
+      placeholder: |
+        例：LuCI でドメイン / IP レンジ単位のカスタム振り分けルールを追加したい。今は全体または内蔵ルールのみで、特定の LAN 機器だけ直結にできない。
+    validations:
+      required: true
+
+  - type: textarea
+    id: requested_behavior
+    attributes:
+      label: 何を追加・変更してほしいですか？
+      description: 概念だけでなく、具体的な動作として記入してください。
+      placeholder: |
+        例：Settings にカスタムルール一覧（送信元 IP / 宛先ドメイン → direct / proxy）を追加し、`vilanet.rules.*` の UCI 設定に書き込む。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: 影響度
+      description: この機能はユーザーにどう影響しますか？**プレースホルダーのままにせず、必ず手動で選択してください。**
+      options:
+        - "⚠️ 影響度を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - 便利になるだけ
+        - 一部のルーターに影響
+        - あるアーキテクチャ / 機種ファミリーに影響
+        - あるワークフローを妨げている
+        - わからない
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 補足情報（任意）
+      description: 関連リンク、設定例、他ツールでの実装、関連 Issue など。
+      placeholder: "設定例、ドキュメントのリンク、関連 Issue のリンクなどを記入できます。"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: 投稿前の確認
+      description: 以下のすべての項目にチェックを入れてください。
+      options:
+        - label: "既存の Issue を検索し、重複リクエストでないことを確認しました。"
+          required: true
+        - label: "機能領域とリクエスト種別を具体的に選択しました。"
+          required: true
+        - label: "現在の問題またはユースケースと、追加・変更してほしい具体的な動作を記入しました。"
+          required: true
+        - label: "「機能を追加して」「改善して」のような曖昧なリクエストはクローズされることを理解しています。"
+          required: true

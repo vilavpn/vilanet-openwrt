@@ -1,0 +1,178 @@
+name: バグ報告（日本語）
+description: 再現可能な VilaNet OpenWrt クライアント（vilanet-core / luci-app-vilanet）の不具合を報告します。
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **すべての必須項目を必ず記入してください。**
+
+        VilaNet はルーター上で動作します。ここで最も重要なのはスクリーンショットではなく、**`logread | grep vilanet` のログ出力** と **`uci show vilanet` の設定** です。ログのない報告は対応が非常に困難です。
+
+  - type: dropdown
+    id: arch
+    attributes:
+      label: ルーターのアーキテクチャ
+      description: "ルーター上で `opkg print-architecture` を実行して確認します。**プレースホルダーのままにせず、必ず手動で選択してください。**"
+      options:
+        - "⚠️ アーキテクチャを選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - x86_64
+        - aarch64（arm64）
+        - armv7
+        - mipsel（mips リトルエンディアン。多くの Xiaomi / TP-Link など）
+        - その他
+    validations:
+      required: true
+
+  - type: input
+    id: openwrt_version
+    attributes:
+      label: OpenWrt バージョン
+      description: "`cat /etc/openwrt_release` または `ubus call system board` を実行。注意：本プロジェクトは OpenWrt 24.10 以上が必要です。"
+      placeholder: "例：OpenWrt 24.10.0 r28427"
+    validations:
+      required: true
+
+  - type: input
+    id: router_model
+    attributes:
+      label: ルーターの機種とメモリ
+      description: 機種名とメモリ容量は調査に役立ちます（任意ですが強く推奨）。
+      placeholder: "例：GL.iNet GL-AX1800、512MB"
+    validations:
+      required: false
+
+  - type: input
+    id: core_version
+    attributes:
+      label: vilanet-core バージョン
+      description: "`vilanet version` の出力を貼り付けてください。"
+      placeholder: "例：VilaNet OpenWRT Client v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_source
+    attributes:
+      label: インストール方法
+      description: どのようにインストールしましたか？**プレースホルダーのままにせず、必ず手動で選択してください。**
+      options:
+        - "⚠️ インストール方法を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - opkg で IPK をインストール（vilanet-core + luci-app-vilanet）
+        - 手動 scp アップロード + ファイル配置
+        - ソースからビルド
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: 問題が発生する場所
+      description: どの操作画面で問題が起きますか？**プレースホルダーのままにせず、必ず手動で選択してください。**
+      options:
+        - "⚠️ 場所を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - LuCI ウェブ画面
+        - UCI コマンドライン（uci ...）
+        - ubus（ubus call vilanet ...）
+        - init.d（/etc/init.d/vilanet ...）
+        - vilanet コマンドライン
+        - 自動更新
+        - わからない
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 不具合の説明
+      description: 具体的に何が起きましたか？何を目にしましたか？
+      placeholder: "LuCI の Network → VilaNet で接続を押すと、ステータスがずっと「connecting」のまま……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順（必須）
+      description: |
+        **必須 — 実際に行った順番どおりに、1 行に 1 ステップずつ記入してください。** インストール / ログインから順に挙げてください。手順どおりに再現できなければ修正できません。
+      placeholder: |
+        1. opkg install vilanet-core_*.ipk luci-app-vilanet_*.ipk
+        2. LuCI の Network → VilaNet でログイン
+        3. Servers で "Tokyo 01" を選択
+        4. 接続を押す
+        5. 約 30 秒待つ
+        6. 上記のエラーが発生
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作 vs 実際の動作
+      description: 何が起きると期待し、実際には何が起きましたか？
+      placeholder: |
+        期待：接続成功し、ステータスが connected になり、外部にアクセスできる。
+        実際：ステータスがずっと connecting で、約 30 秒後に disconnected に戻る。
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ（必須）
+      description: |
+        **これが最も重要な項目です。** `logread | grep vilanet` の出力（直近 50 行ほど）を貼り付けてください。
+
+        リアルタイム表示：`logread -f | grep vilanet`／デーモンのログファイル：`/var/log/vilanet.log`／生成された sing-box 設定：`/var/etc/vilanet.json`。
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: uci
+    attributes:
+      label: UCI 設定（任意）
+      description: |
+        `uci show vilanet` の出力を貼り付けてください。注意：アカウント資格情報は `/etc/vilanet/.credentials` に保存され、UCI には**含まれない**ため、この出力は共有しても安全です。
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: diag
+    attributes:
+      label: 診断バンドル（任意・強く推奨）
+      description: |
+        `vilanet diagnostics`（別名 `vilanet diag`）を実行すると、**機微情報を除去した**サポートバンドルが生成されます。生成されたファイルをここにドラッグするか、パスを貼り付けてください。
+      placeholder: "vilanet diagnostics で生成されたファイルをここにドラッグしてください。"
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: スクリーンショット（任意）
+      description: 問題が LuCI ウェブ画面で起きる場合（画面が真っ白、メニューが出ないなど）は、スクリーンショットをドラッグしてください。
+      placeholder: "LuCI 画面のスクリーンショットをここにドラッグしてください。"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: 確認事項
+      description: 以下のすべての項目にチェックを入れてください。
+      options:
+        - label: "既存の Issue を検索し、重複でないことを確認しました。"
+          required: true
+        - label: "最新リリースの IPK を使用しています。"
+          required: true
+        - label: "`logread | grep vilanet` のログ出力を添付しました。"
+          required: true
+        - label: "再現手順を概要ではなく、順番どおり 1 つずつ記入しました。"
+          required: true
+        - label: "再現手順は、自分だけが持つ非公開のアカウント資格情報に依存していません。"
+          required: true

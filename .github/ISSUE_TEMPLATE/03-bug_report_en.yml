@@ -1,0 +1,178 @@
+name: Bug report (English)
+description: Report a reproducible bug in the VilaNet OpenWrt client (vilanet-core / luci-app-vilanet).
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please fill in every required field.**
+
+        VilaNet runs on a router. The most important thing here is not a screenshot — it is **the `logread | grep vilanet` log output** plus **your `uci show vilanet` config**. A report without logs is very hard to act on.
+
+  - type: dropdown
+    id: arch
+    attributes:
+      label: Router architecture
+      description: "Run `opkg print-architecture` on the router to check. **Please pick manually — do not leave the placeholder selected.**"
+      options:
+        - "⚠️ Please select an architecture (leaving this counts as an invalid submission and will be closed)"
+        - x86_64
+        - aarch64 (arm64)
+        - armv7
+        - mipsel (mips little-endian, e.g. many Xiaomi / TP-Link)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: openwrt_version
+    attributes:
+      label: OpenWrt version
+      description: "Run `cat /etc/openwrt_release` or `ubus call system board`. Note: this project requires OpenWrt 24.10 or newer."
+      placeholder: "e.g. OpenWrt 24.10.0 r28427"
+    validations:
+      required: true
+
+  - type: input
+    id: router_model
+    attributes:
+      label: Router model and RAM
+      description: Model and RAM help with triage (optional but strongly recommended).
+      placeholder: "e.g. GL.iNet GL-AX1800, 512MB"
+    validations:
+      required: false
+
+  - type: input
+    id: core_version
+    attributes:
+      label: vilanet-core version
+      description: "Paste the output of `vilanet version`."
+      placeholder: "e.g. VilaNet OpenWRT Client v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_source
+    attributes:
+      label: Install method
+      description: How did you install it? **Please pick manually — do not leave the placeholder selected.**
+      options:
+        - "⚠️ Please select an install method (leaving this counts as an invalid submission and will be closed)"
+        - opkg install IPK (vilanet-core + luci-app-vilanet)
+        - Manual scp upload + file placement
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where the issue occurs
+      description: Which surface are you using when the issue happens? **Please pick manually — do not leave the placeholder selected.**
+      options:
+        - "⚠️ Please select where it occurs (leaving this counts as an invalid submission and will be closed)"
+        - LuCI web UI
+        - UCI command line (uci ...)
+        - ubus (ubus call vilanet ...)
+        - init.d (/etc/init.d/vilanet ...)
+        - vilanet command line
+        - Auto-update
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the bug? What did you see?
+      placeholder: "In LuCI under Network → VilaNet, after I tap connect the status stays at \"connecting\"..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce (required)
+      description: |
+        **Required — list every step, one per line, in the order you performed them.** Start from install / login. If we cannot reproduce the bug by following your list, we cannot fix it.
+      placeholder: |
+        1. opkg install vilanet-core_*.ipk luci-app-vilanet_*.ipk
+        2. Log in under LuCI → Network → VilaNet
+        3. On Servers, select "Tokyo 01"
+        4. Tap connect
+        5. Wait ~30 seconds
+        6. See the error described above
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+      description: What did you expect to happen, and what actually happened?
+      placeholder: |
+        Expected: connects, status shows connected, and the internet works.
+        Actual: status stays at connecting and returns to disconnected after ~30 seconds.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (required)
+      description: |
+        **This is the most important field.** Paste the output of `logread | grep vilanet` (the last ~50 lines).
+
+        Live: `logread -f | grep vilanet`; daemon log file: `/var/log/vilanet.log`; generated sing-box config: `/var/etc/vilanet.json`.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: uci
+    attributes:
+      label: UCI config (optional)
+      description: |
+        Paste the output of `uci show vilanet`. Note: account credentials live in `/etc/vilanet/.credentials`, **not** in UCI, so this output is safe to share.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: diag
+    attributes:
+      label: Diagnostic bundle (optional, strongly recommended)
+      description: |
+        Running `vilanet diagnostics` (alias `vilanet diag`) produces a **redacted** support bundle. Drag the generated file here, or paste its path.
+      placeholder: "Drag the file produced by vilanet diagnostics here."
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshot (optional)
+      description: If the issue is in the LuCI web UI (e.g. a blank page or a missing menu), drag a screenshot here.
+      placeholder: "Drag a screenshot of the LuCI UI here."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: Integrity checklist
+      description: Please check every item.
+      options:
+        - label: "I searched existing issues and confirmed this is not a duplicate."
+          required: true
+        - label: "I am using the latest released IPK version."
+          required: true
+        - label: "I attached the `logread | grep vilanet` log output."
+          required: true
+        - label: "I wrote out the reproduction steps one by one, in order, not just a summary."
+          required: true
+        - label: "My reproduction steps do not depend on private account credentials that only I have."
+          required: true

@@ -1,0 +1,178 @@
+name: 问题反馈（中文）
+description: 反馈一个可以重现的 VilaNet OpenWrt 客户端（vilanet-core / luci-app-vilanet）问题。
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **请认真填写每一个必填项。**
+
+        VilaNet 运行在路由器上。这里最重要的不是截图，而是：**`logread | grep vilanet` 的日志输出** + **`uci show vilanet` 配置**。没有日志的反馈非常难以处理。
+
+  - type: dropdown
+    id: arch
+    attributes:
+      label: 路由器架构
+      description: "在路由器上运行 `opkg print-architecture` 查看。**请手动选择，不要保留默认占位符。**"
+      options:
+        - "⚠️ 请选择架构（保留此项会被视为无效提交并关闭）"
+        - x86_64
+        - aarch64（arm64）
+        - armv7
+        - mipsel（mips 小端，如多数小米 / TP-Link）
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: openwrt_version
+    attributes:
+      label: OpenWrt 版本
+      description: "运行 `cat /etc/openwrt_release` 或 `ubus call system board`。注意：本项目要求 OpenWrt 24.10 及以上。"
+      placeholder: "例如：OpenWrt 24.10.0 r28427"
+    validations:
+      required: true
+
+  - type: input
+    id: router_model
+    attributes:
+      label: 路由器型号与内存
+      description: 型号和内存大小有助于排查（可选，但强烈建议填写）。
+      placeholder: "例如：GL.iNet GL-AX1800，512MB"
+    validations:
+      required: false
+
+  - type: input
+    id: core_version
+    attributes:
+      label: vilanet-core 版本
+      description: "粘贴 `vilanet version` 的输出。"
+      placeholder: "例如：VilaNet OpenWRT Client v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_source
+    attributes:
+      label: 安装方式
+      description: 你是怎么安装的？**请手动选择，不要保留默认占位符。**
+      options:
+        - "⚠️ 请选择安装方式（保留此项会被视为无效提交并关闭）"
+        - opkg 安装 IPK（vilanet-core + luci-app-vilanet）
+        - 手动 scp 上传 + 放置文件
+        - 从源码编译
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: 问题出现的位置
+      description: 你在哪个入口遇到问题？**请手动选择，不要保留默认占位符。**
+      options:
+        - "⚠️ 请选择位置（保留此项会被视为无效提交并关闭）"
+        - LuCI 网页界面
+        - UCI 命令行（uci ...）
+        - ubus（ubus call vilanet ...）
+        - init.d（/etc/init.d/vilanet ...）
+        - vilanet 命令行
+        - 自动更新
+        - 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 具体遇到了什么问题？你看到了什么？
+      placeholder: "在 LuCI 的 Network → VilaNet 里点击连接后，状态一直显示「connecting」……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 重现步骤（必填）
+      description: |
+        **必填 — 请按你实际操作的顺序，每一步一行。** 从安装 / 登录开始依次列出。如果我们无法按你的步骤重现问题，就无法修复。
+      placeholder: |
+        1. opkg install vilanet-core_*.ipk luci-app-vilanet_*.ipk
+        2. 在 LuCI 的 Network → VilaNet 登录
+        3. 在 Servers 选择 "Tokyo 01"
+        4. 点击连接
+        5. 等待约 30 秒
+        6. 出现上面描述的错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为 vs 实际行为
+      description: 你期望发生什么？实际发生了什么？
+      placeholder: |
+        预期：连接成功，状态显示 connected，可正常访问外网。
+        实际：状态一直 connecting，约 30 秒后回到 disconnected。
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志（必填）
+      description: |
+        **这是最重要的一项。** 请粘贴 `logread | grep vilanet` 的输出（最近约 50 行）。
+
+        实时查看：`logread -f | grep vilanet`；守护进程日志文件：`/var/log/vilanet.log`；生成的 sing-box 配置：`/var/etc/vilanet.json`。
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: uci
+    attributes:
+      label: UCI 配置（可选）
+      description: |
+        粘贴 `uci show vilanet` 的输出。注意：账号凭据存放在 `/etc/vilanet/.credentials`，**不在** UCI 里，所以此输出可安全分享。
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: diag
+    attributes:
+      label: 诊断包（可选，强烈推荐）
+      description: |
+        运行 `vilanet diagnostics`（别名 `vilanet diag`）会生成一个**已脱敏**的支持包。请把生成的文件拖到这里，或粘贴其路径。
+      placeholder: "把 vilanet diagnostics 生成的文件拖到这里。"
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图（可选）
+      description: 如果问题出现在 LuCI 网页界面（例如页面空白、菜单缺失），请拖入一张截图。
+      placeholder: "把 LuCI 界面的截图拖到这里。"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: 完整性声明
+      description: 请勾选下面每一项。
+      options:
+        - label: "我已搜索并确认此问题不是重复提交。"
+          required: true
+        - label: "我正在使用最新发布的 IPK 版本。"
+          required: true
+        - label: "我已附上 `logread | grep vilanet` 的日志输出。"
+          required: true
+        - label: "我按顺序逐条写出了重现步骤，而不是只写一句概述。"
+          required: true
+        - label: "我的重现步骤不依赖只有我才有的私密账号凭据。"
+          required: true
