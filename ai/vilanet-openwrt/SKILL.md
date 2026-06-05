@@ -1,6 +1,6 @@
 ---
 name: vilanet-openwrt
-description: Drive vilanet on OpenWRT 24.10+ end-to-end — install IPKs via opkg, configure via UCI (uci set vilanet....), drive via ubus calls (ubus call vilanet status), use the LuCI app under Network → VilaNet, manage credentials in the AES-GCM envelope at /etc/vilanet/.credentials, troubleshoot the rpcd shim. Use whenever the user mentions VilaNet OpenWrt, the router-side VPN, LuCI VilaNet app, opkg vilanet-core / luci-app-vilanet, UCI keys (network.dns_mode, hy2.speed_mode, routing_mode, block_porn, block_stun, block_dot, block_quic), or a ubus method (vilanet.status / list_servers / connect / etc).
+description: Drive vilanet on OpenWRT 24.10+ end-to-end — install IPKs via opkg, configure via UCI (uci set vilanet....), drive via ubus calls (ubus call vilanet status), use the LuCI app under Network → VilaNet, manage credentials in the AES-GCM envelope at /etc/vilanet/.credentials, troubleshoot the rpcd shim. Use whenever the user mentions VilaNet OpenWrt, the router-side VPN, LuCI VilaNet app, opkg vilanet-core / luci-app-vilanet, iStore one-click install, apk install on OpenWrt 25, UCI keys (network.dns_mode, hy2.speed_mode, routing_mode, routing_mode=tun, block_porn, block_stun, block_dot, block_quic), or a ubus method (vilanet.status / list_servers / connect / etc).
 ---
 
 # vilanet-openwrt — operator skill for AI agents
@@ -113,6 +113,27 @@ with `make release` (see *Build from source* below). **vilanet-openwrt
 is closed-source** — end users without source access install the
 prebuilt IPKs only.
 
+### iStore (one-click, recommended on iStoreOS)
+
+Download `vilanet-istore-install_1.0.13.run` from the GitHub releases
+page. In iStoreOS, open **iStore → Manual Install** and upload the
+`.run` file. Everything installs automatically.
+
+### OpenWrt 25.x (APK)
+
+OpenWrt 25.x uses `apk` instead of `opkg`. Download the `.apk` assets
+from the releases page:
+
+```sh
+scp -O vilanet-core_1.0.13_x86_64.apk      root@<router>:/tmp/
+scp -O luci-app-vilanet_1.0.13_all.apk      root@<router>:/tmp/
+ssh root@<router> 'apk add --allow-untrusted --force-non-repository \
+  /tmp/vilanet-core_1.0.13_x86_64.apk \
+  /tmp/luci-app-vilanet_1.0.13_all.apk'
+```
+
+Replace arch label as appropriate (same labels as IPK).
+
 ### Install on the router
 
 ```sh
@@ -120,11 +141,11 @@ prebuilt IPKs only.
 # FROM `opkg print-architecture` — installing a mismatched arch yields
 # "exec format error" at install time.
 scp -O bin/vilanet-core_1.0.13_x86_64.ipk    root@198.51.100.42:/tmp/
-scp -O bin/luci-app-vilanet_1.0.0_all.ipk    root@198.51.100.42:/tmp/
+scp -O bin/luci-app-vilanet_1.0.13_all.ipk    root@198.51.100.42:/tmp/
 
 ssh root@198.51.100.42 \
     'opkg install /tmp/vilanet-core_1.0.13_x86_64.ipk \
-                  /tmp/luci-app-vilanet_1.0.0_all.ipk'
+                  /tmp/luci-app-vilanet_1.0.13_all.ipk'
 ```
 
 The `vilanet-core` postinst:
@@ -134,8 +155,8 @@ The `vilanet-core` postinst:
 2. Tightens `/etc/vilanet` to mode 0700 and `/etc/vilanet/.credentials`
    to mode 0600.
 3. Runs a one-shot UCI migration: drops retired sections from
-   pre-v0.2 installs and clamps `global.log_level` to `warn` if it
-   was set to a verbose level.
+   pre-v0.2 installs and clamps `global.log_level` to
+   `{error, warn, info}` if it was set to a more verbose level.
 4. `/etc/init.d/vilanet enable` — the service is wired to start at
    boot but only actually starts when `global.enabled=1` AND
    `global.auto_connect=1`.
@@ -320,11 +341,11 @@ package). Same redaction rules as `servers`.
 vilanet mode                  # print current mode
 vilanet mode global           # route everything through the tunnel
 vilanet mode rule             # China bypass via sing-box ruleset
-vilanet mode direct           # no tunnel (effectively pause)
+vilanet mode pac              # PAC mode — normalised to 'rule' by the server
 ```
 
-Setting a new mode rewrites `global.connection_mode` and, if the
-daemon is currently running, calls `/etc/init.d/vilanet restart`.
+Setting a new mode rewrites `global.connection_mode` (clamped to
+`{global, rule, pac}`) and restarts the daemon if running.
 
 ### `vilanet config`
 
@@ -422,7 +443,8 @@ set`. The list is **authoritative** (read from `src/cli.go`'s
 | `global.enabled`            | bool (`1`/`0`)                | Whether procd should keep the daemon up.                                               |
 | `global.selected_server`    | string                        | Node id, name, or `auto_<ISO2>` for country-scoped auto.                               |
 | `global.selected_package`   | string                        | Package id or UUID.                                                                    |
-| `global.connection_mode`    | `global` \| `rule` \| `direct`| `rule` = China-bypass via sing-box ruleset.                                            |
+| `global.connection_mode`    | `global` \| `rule` \| `pac`   | `rule` = China-bypass via sing-box ruleset. `pac` is normalised to `rule`; both produce identical sing-box config. |
+| `global.routing_mode`       | `proxy` \| `tun`              | Data path: `proxy` = SOCKS5/HTTP LAN sharing only; `tun` = whole-LAN transparent gateway (all LAN traffic captured via TUN, zero per-device config). Set via `uci set vilanet.global.routing_mode=tun`. |
 | `network.domain_strategy`   | `ipv4_only` \| `prefer_ipv4` \| `prefer_ipv6` | DNS lookup preference. Default: `ipv4_only`.                            |
 | `network.dns_remote`        | string                        | Tunnel-side DNS (DoH URL or plain IP). Default: `https://1.0.0.1/dns-query`.           |
 | `network.dns_local`         | string                        | Local-side DNS. Default: `223.5.5.5`.                                                  |
@@ -449,7 +471,7 @@ defaults are:
 ```
 config vilanet 'global'                # enabled, auto_connect, auto_reconnect,
                                         # selected_server, selected_package,
-                                        # connection_mode, log_level
+                                        # connection_mode, routing_mode, log_level
 config credentials 'auth'              # email (password lives in encrypted envelope)
 config network 'settings'              # domain_strategy, dns_remote, dns_local,
                                         # bypass_china, bypass_lan, enable_ipv6, mtu
