@@ -54,8 +54,7 @@ SSH root@router
  ├── /etc/vilanet/                         ← runtime state directory (mode 0700)
  │     ├── device.secret                   ← HKDF root key — NEVER back up, NEVER copy
  │     ├── storage/                        ← AES-256-GCM creds envelope (see A4 below)
- │     ├── .credentials                    ← legacy path; same envelope format
- │     └── api_endpoints.json              ← runtime-loaded API endpoint set (A5)
+ │     └── .credentials                    ← legacy path; same envelope format
  ├── /usr/libexec/rpcd/vilanet             ← rpcd shim: ubus ↔ vilanet CLI bridge
  ├── /www/luci-static/resources/view/vilanet/  ← LuCI JS app (overview/settings/servers)
  ├── /usr/share/luci/menu.d/luci-app-vilanet.json   ← menu mount
@@ -133,8 +132,8 @@ The `vilanet-core` postinst:
 2. Tightens `/etc/vilanet` to mode 0700 and `/etc/vilanet/.credentials`
    to mode 0600.
 3. Runs a one-shot UCI migration: drops retired sections from
-   pre-v0.2 installs and clamps `global.log_level` to `info` if it
-   was `debug`/`trace`.
+   pre-v0.2 installs and clamps `global.log_level` to `warn` if it
+   was set to a verbose level.
 4. `/etc/init.d/vilanet enable` — the service is wired to start at
    boot but only actually starts when `global.enabled=1` AND
    `global.auto_connect=1`.
@@ -554,8 +553,9 @@ If you need to write a key outside this list (e.g.
 `global.selected_server`), use `uci set vilanet.<section>.<option>=...`
 + `uci commit` over SSH, then `/etc/init.d/vilanet restart`.
 
-`global.log_level` is further constrained to `error|warn|info` —
-`debug`/`trace` are rejected.
+`global.log_level` is further constrained to `error|warn` —
+`info`/`debug`/`trace` are rejected so config details never reach the
+log file.
 
 ## On-disk file reference
 
@@ -569,7 +569,6 @@ If you need to write a key outside this list (e.g.
 | `/etc/vilanet/device.secret`         | **CRITICAL**: HKDF root key for the credentials envelope. Never back up. Never copy off-router. | 0600       |
 | `/etc/vilanet/.credentials`          | Legacy path for the AES-GCM v1 envelope.                                                         | 0600       |
 | `/etc/vilanet/storage/`              | AES-256-GCM credentials envelope (current path).                                                 | 0600       |
-| `/etc/vilanet/api_endpoints.json`    | Runtime-loaded API endpoint set (A5).                                                            | 0644       |
 | `/usr/libexec/rpcd/vilanet`          | rpcd shim. Bridges ubus → vilanet CLI.                                                           | 0755       |
 | `/www/luci-static/resources/view/vilanet/` | LuCI JS views: `overview.js`, `settings.js`, `servers.js`.                                 | 0644       |
 | `/usr/share/luci/menu.d/luci-app-vilanet.json` | LuCI menu mount.                                                                       | 0644       |
@@ -687,8 +686,8 @@ Common patterns:
 - `Failed to start service: provider load failed: authentication
   failed: ...` — bad creds; re-run `vilanet login`.
 - `Failed to start service: provider load failed: ...no such host...`
-  — network unreachable; check `/etc/vilanet/api_endpoints.json` is
-  present and `ping vilavpn.com` resolves.
+  — network unreachable; verify the router has WAN connectivity
+  (`ping 1.1.1.1` for reachability, then a name lookup for DNS).
 - `failed to start VPN: ...permission denied...` — `kmod-tun` not
   loaded; `opkg install kmod-tun ip-full` and reboot.
 
@@ -706,17 +705,10 @@ uci commit vilanet
 ### Kill switch behavior
 
 `vilanet.kill_switch.enabled='1'` opts the daemon into the G6 kill
-switch — when the tunnel goes down, the daemon's allow-list (built
-from `core.FallbackDomains()` plus the runtime-loaded endpoints in
-`/etc/vilanet/api_endpoints.json`) is the only set of upstream
-destinations LAN traffic can reach. Enabling the kill switch **without
-TUN mode active** will interrupt LAN internet during service
-restarts — warn the user before flipping it on.
-
-The runtime endpoint set is loaded at daemon start via
-`api.LoadEndpointsOrWarn`. A missing or malformed file is non-fatal
-(falls back to XOR-masked compiled-in defaults), but a fresh install
-should always have it — it ships as a conffile in `vilanet-core`.
+switch — when the tunnel goes down, LAN traffic is restricted to the
+daemon's internally-maintained maintenance allow-list. Enabling the
+kill switch **without TUN mode active** will interrupt LAN internet
+during service restarts — warn the user before flipping it on.
 
 ### LAN sharing skipped at start_service
 
