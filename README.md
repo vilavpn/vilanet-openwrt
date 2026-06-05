@@ -4,8 +4,6 @@
 binary, a UCI configuration layer, and a full LuCI web interface — no cloud
 agent, no root SSH required for day-to-day operation.
 
-Current version: **v1.0.13**
-
 - [Full user guide](https://openwrt.vilavpn.com)
 - [VilaVPN](https://vilavpn.com)
 
@@ -66,7 +64,7 @@ The architecture label appears in the IPK/APK filename.
 
 ### iStoreOS / iStore (easiest)
 
-Download `vilanet-istore-install_1.0.13.run` from the
+Download `vilanet-istore-install_<VER>.run` from the
 [releases page](https://github.com/vilavpn/vilanet-openwrt/releases), then
 open **iStore → Manual Install** and upload the `.run` file. iStore installs
 everything automatically (core + LuCI + all 9 languages).
@@ -75,14 +73,14 @@ everything automatically (core + LuCI + all 9 languages).
 
 ```sh
 # Transfer APKs to the router (replace arch label as appropriate)
-scp -O vilanet-core_1.0.13_x86_64.apk      root@<router-ip>:/tmp/
-scp -O luci-app-vilanet_1.0.13_all.apk     root@<router-ip>:/tmp/
+scp -O vilanet-core_<VER>_x86_64.apk      root@<router-ip>:/tmp/
+scp -O luci-app-vilanet_<VER>_all.apk     root@<router-ip>:/tmp/
 
 # Install
 ssh root@<router-ip> \
     'apk add --allow-untrusted --force-non-repository \
-     /tmp/vilanet-core_1.0.13_x86_64.apk \
-     /tmp/luci-app-vilanet_1.0.13_all.apk'
+     /tmp/vilanet-core_<VER>_x86_64.apk \
+     /tmp/luci-app-vilanet_<VER>_all.apk'
 ```
 
 ### OpenWrt 24.10 (opkg)
@@ -94,13 +92,13 @@ interactive architecture selector.
 
 ```sh
 # Transfer IPKs to the router (replace arch label and version as appropriate)
-scp -O vilanet-core_1.0.13_x86_64.ipk     root@<router-ip>:/tmp/
-scp -O luci-app-vilanet_1.0.13_all.ipk    root@<router-ip>:/tmp/
+scp -O vilanet-core_<VER>_x86_64.ipk     root@<router-ip>:/tmp/
+scp -O luci-app-vilanet_<VER>_all.ipk    root@<router-ip>:/tmp/
 
 # Install on the router
 ssh root@<router-ip> \
-    'opkg install /tmp/vilanet-core_1.0.13_x86_64.ipk \
-                  /tmp/luci-app-vilanet_1.0.13_all.ipk'
+    'opkg install /tmp/vilanet-core_<VER>_x86_64.ipk \
+                  /tmp/luci-app-vilanet_<VER>_all.ipk'
 ```
 
 After install, hard-refresh your browser to clear the LuCI module cache, then
