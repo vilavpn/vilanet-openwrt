@@ -23,22 +23,25 @@ configuration needed.
   traffic through the tunnel automatically; individual devices need no proxy
   settings.
 - **Full LuCI web interface** — connect, switch servers, and change settings
-  from your browser under Network > VPN > VilaNet. Three tabs: Overview,
+  from your browser under **Network > VilaNet**. Three tabs: Overview,
   Settings, Servers.
-- **Multilingual UI** — the LuCI app ships translations for English, Japanese,
-  Chinese (Traditional), Korean, Russian, Farsi, Arabic, and Vietnamese.
+- **Multilingual UI** — the LuCI app ships 9 languages built in: English,
+  Japanese, Chinese (Simplified), Chinese (Traditional), Korean, Russian,
+  Farsi, Arabic, and Vietnamese. The interface follows your router's language
+  setting automatically — no extra download needed.
 - **sing-box core** — embeds sing-box v1.13 as a library. Supports VMess,
-  VLESS+Reality, Hysteria2, Shadowsocks, and Trojan.
+  VLESS+Reality, Hysteria2, AnyTLS, Shadowsocks, and Trojan.
 - **Encrypted credentials at rest** — passwords are stored in an AES-256-GCM
-  envelope keyed to the router's device secret; never written in plaintext.
+  envelope at `/etc/vilanet/.credentials`, keyed to the router's device secret;
+  never written in plaintext.
 - **Kill switch** — blocks LAN internet if the tunnel drops unexpectedly.
 - **Auto-update** — the daemon checks for and applies updates automatically.
 - **Chrome/Gemini compatibility** — QUIC no_drop fix (vilanet-core v0.1.8)
   prevents blank-page issues with Chrome and Google Gemini.
-- **iStore support** — available through the iStore app store for compatible
-  OpenWrt distributions.
-- **APK support** — compatible with OpenWrt 25.x package format (apk) as well
-  as the classic opkg format.
+- **iStore support** — one-click install via iStore on compatible OpenWrt
+  distributions (iStoreOS).
+- **APK support** — compatible with OpenWrt 25.x package format (`apk`) as
+  well as the classic `opkg` format.
 
 ---
 
@@ -48,10 +51,12 @@ configuration needed.
 |---------------------------|---------------------------------------------------|
 | `x86_64`                  | x86-based OpenWrt (PC routers, VMs, NanoPi R2S)  |
 | `aarch64_cortex-a53`      | GL.iNet AX1800, NanoPi R4S, Raspberry Pi 4       |
+| `aarch64_generic`         | Generic 64-bit ARM boards                        |
+| `arm_cortex-a7`           | Older ARM routers (cortex-a7, neon-vfpv4)        |
 | `mipsel_24kc`             | Xiaomi, Netgear, TP-Link MIPS routers             |
 
 Run `opkg print-architecture` on your router to identify the right package.
-The architecture label appears in the IPK filename.
+The architecture label appears in the IPK/APK filename.
 
 **Minimum requirements:** OpenWrt 24.10.x or newer, 128 MB RAM.
 
@@ -59,12 +64,33 @@ The architecture label appears in the IPK filename.
 
 ## Install
 
+### iStoreOS / iStore (easiest)
+
+Download `vilanet-istore-install_1.0.13.run` from the
+[releases page](https://github.com/vilavpn/vilanet-openwrt/releases), then
+open **iStore → Manual Install** and upload the `.run` file. iStore installs
+everything automatically (core + LuCI + all 9 languages).
+
+### OpenWrt 25.x (APK)
+
+```sh
+# Transfer APKs to the router (replace arch label as appropriate)
+scp -O vilanet-core_1.0.13_x86_64.apk      root@<router-ip>:/tmp/
+scp -O luci-app-vilanet_1.0.13_all.apk     root@<router-ip>:/tmp/
+
+# Install
+ssh root@<router-ip> \
+    'apk add --allow-untrusted --force-non-repository \
+     /tmp/vilanet-core_1.0.13_x86_64.apk \
+     /tmp/luci-app-vilanet_1.0.13_all.apk'
+```
+
+### OpenWrt 24.10 (opkg)
+
 The closed-source IPKs (`vilanet-core_*.ipk` and `luci-app-vilanet_*.ipk`)
 are distributed through VilaVPN customer channels. See the
-[full user guide](https://openwrt.vilavpn.com) for download links, the
-architecture selector, and step-by-step install instructions.
-
-The quick path once you have the IPKs:
+[full user guide](https://openwrt.vilavpn.com) for download links and the
+interactive architecture selector.
 
 ```sh
 # Transfer IPKs to the router (replace arch label and version as appropriate)
@@ -78,11 +104,11 @@ ssh root@<router-ip> \
 ```
 
 After install, hard-refresh your browser to clear the LuCI module cache, then
-open **Network > VPN > VilaNet**.
+open **Network > VilaNet**.
 
 ### Upgrading
 
-The daemon supports auto-update. To upgrade manually:
+The daemon supports auto-update. To upgrade manually with opkg:
 
 ```sh
 opkg install /tmp/vilanet-core_<new-version>_<arch>.ipk \
@@ -111,8 +137,7 @@ vilanet connect --country HK
 vilanet status
 ```
 
-The same flow is available in the browser via **Network > VPN > VilaNet >
-Overview**.
+The same flow is available in the browser via **Network > VilaNet > Overview**.
 
 ---
 
@@ -126,7 +151,7 @@ uci set vilanet.global.routing_mode=tun
 uci commit vilanet
 /etc/init.d/vilanet restart
 
-# Switch routing mode (rule = China bypass, global = route everything)
+# Switch routing policy (rule = China bypass, global = route everything)
 vilanet mode rule
 vilanet mode global
 
@@ -136,8 +161,8 @@ uci commit vilanet
 /etc/init.d/vilanet restart
 
 # Enable LAN sharing (SOCKS5/HTTP proxy for devices that prefer it)
-uci set vilanet.lan_sharing.enabled=1
-uci set vilanet.lan_sharing.port=10081
+uci set vilanet.proxy.enabled=1
+uci set vilanet.proxy.port=10081
 uci commit vilanet
 /etc/init.d/vilanet restart
 

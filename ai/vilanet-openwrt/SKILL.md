@@ -1,6 +1,6 @@
 ---
 name: vilanet-openwrt
-description: Drive vilanet on OpenWRT 24.10+ end-to-end — install IPKs via opkg, configure via UCI (uci set vilanet....), drive via ubus calls (ubus call vilanet status), use the LuCI app under Network → VPN → VilaNet, manage credentials in the AES-GCM envelope at /etc/vilanet/storage/, troubleshoot the rpcd shim. Use whenever the user mentions VilaNet OpenWrt, the router-side VPN, LuCI VilaNet app, opkg vilanet-core / luci-app-vilanet, UCI keys (network.dns_mode, hy2.speed_mode, routing_mode, block_porn, block_stun, block_dot, block_quic), or a ubus method (vilanet.status / list_servers / connect / etc).
+description: Drive vilanet on OpenWRT 24.10+ end-to-end — install IPKs via opkg, configure via UCI (uci set vilanet....), drive via ubus calls (ubus call vilanet status), use the LuCI app under Network → VilaNet, manage credentials in the AES-GCM envelope at /etc/vilanet/.credentials, troubleshoot the rpcd shim. Use whenever the user mentions VilaNet OpenWrt, the router-side VPN, LuCI VilaNet app, opkg vilanet-core / luci-app-vilanet, UCI keys (network.dns_mode, hy2.speed_mode, routing_mode, block_porn, block_stun, block_dot, block_quic), or a ubus method (vilanet.status / list_servers / connect / etc).
 ---
 
 # vilanet-openwrt — operator skill for AI agents
@@ -11,7 +11,7 @@ Homepage: <https://github.com/vilavpn/vilanet-openwrt>
 24.10 and newer. One Go binary at `/usr/bin/vilanet` (statically linked,
 sing-box compiled in as a library), one UCI config at `/etc/config/vilanet`,
 one rpcd shim at `/usr/libexec/rpcd/vilanet`, and a LuCI JS app mounted at
-`Network → VPN → VilaNet`. This skill teaches you (the AI) how to drive
+`Network → VilaNet`. This skill teaches you (the AI) how to drive
 the router-side client for an end user.
 
 ## When to use this skill
@@ -20,7 +20,7 @@ the router-side client for an end user.
   the IPK packages `vilanet-core` / `luci-app-vilanet`.
 - The user is SSHed into a router (e.g. `root@192.168.x.x`) and wants
   to connect, disconnect, switch servers, or check VPN status.
-- The user reports a problem with the **Network → VPN → VilaNet**
+- The user reports a problem with the **Network → VilaNet**
   LuCI screens (Overview / Settings / Servers tabs).
 - The user wants to inspect or change a UCI key (`uci set
   vilanet....`), call a ubus method (`ubus call vilanet ...`), or
@@ -53,8 +53,8 @@ SSH root@router
  ├── /etc/config/vilanet                   ← UCI config (uci show vilanet)
  ├── /etc/vilanet/                         ← runtime state directory (mode 0700)
  │     ├── device.secret                   ← HKDF root key — NEVER back up, NEVER copy
- │     ├── storage/                        ← AES-256-GCM creds envelope (see A4 below)
- │     └── .credentials                    ← legacy path; same envelope format
+ │     ├── .credentials                    ← AES-256-GCM creds envelope (see A4 below)
+ │     └── storage/                        ← secure storage directory (other runtime data)
  ├── /usr/libexec/rpcd/vilanet             ← rpcd shim: ubus ↔ vilanet CLI bridge
  ├── /www/luci-static/resources/view/vilanet/  ← LuCI JS app (overview/settings/servers)
  ├── /usr/share/luci/menu.d/luci-app-vilanet.json   ← menu mount
@@ -104,6 +104,8 @@ Look for the most specific non-`all` arch (e.g. `mipsel_24kc`, `x86_64`,
 |----------------------------|------------------------------------------|
 | `x86_64`                   | x86-based OpenWRT (PC routers, VMs)      |
 | `aarch64_cortex-a53`       | GL.iNet AX1800, NanoPi R4S, RPi 4        |
+| `aarch64_generic`          | Generic 64-bit ARM boards                |
+| `arm_cortex-a7`            | Older ARM routers (cortex-a7, neon-vfpv4)|
 | `mipsel_24kc`              | Xiaomi/Netgear/TP-Link MIPS routers      |
 
 For arches outside this table, the operator must build from source
@@ -117,11 +119,11 @@ prebuilt IPKs only.
 # Copy IPKs to the router. CHOOSE THE ARCH THAT MATCHES YOUR OUTPUT
 # FROM `opkg print-architecture` — installing a mismatched arch yields
 # "exec format error" at install time.
-scp -O bin/vilanet-core_1.0.0_x86_64.ipk     root@198.51.100.42:/tmp/
+scp -O bin/vilanet-core_1.0.13_x86_64.ipk    root@198.51.100.42:/tmp/
 scp -O bin/luci-app-vilanet_1.0.0_all.ipk    root@198.51.100.42:/tmp/
 
 ssh root@198.51.100.42 \
-    'opkg install /tmp/vilanet-core_1.0.0_x86_64.ipk \
+    'opkg install /tmp/vilanet-core_1.0.13_x86_64.ipk \
                   /tmp/luci-app-vilanet_1.0.0_all.ipk'
 ```
 
@@ -213,7 +215,7 @@ vilanet login [--email <addr>] [--password <pw>]
 ```
 
 Stores credentials in `/etc/config/vilanet` (email only) and in the
-AES-GCM envelope under `/etc/vilanet/storage/` (password). With
+AES-GCM envelope at `/etc/vilanet/.credentials` (password). With
 `--connect=true` (the default) it also restarts the daemon so the new
 credentials take effect immediately.
 
@@ -553,7 +555,7 @@ If you need to write a key outside this list (e.g.
 `global.selected_server`), use `uci set vilanet.<section>.<option>=...`
 + `uci commit` over SSH, then `/etc/init.d/vilanet restart`.
 
-`global.log_level` is further constrained to `error|warn` —
+`global.log_level` is constrained to `error|warn|info` —
 `info`/`debug`/`trace` are rejected so config details never reach the
 log file.
 
@@ -567,8 +569,8 @@ log file.
 | `/etc/hotplug.d/iface/30-vilanet`    | Network-change hotplug hook.                                                                     | 0755       |
 | `/etc/vilanet/`                      | Runtime state directory.                                                                         | 0700       |
 | `/etc/vilanet/device.secret`         | **CRITICAL**: HKDF root key for the credentials envelope. Never back up. Never copy off-router. | 0600       |
-| `/etc/vilanet/.credentials`          | Legacy path for the AES-GCM v1 envelope.                                                         | 0600       |
-| `/etc/vilanet/storage/`              | AES-256-GCM credentials envelope (current path).                                                 | 0600       |
+| `/etc/vilanet/.credentials`          | AES-256-GCM credentials envelope (current active path).                                          | 0600       |
+| `/etc/vilanet/storage/`              | Secure storage directory for other runtime data.                                                  | 0700       |
 | `/usr/libexec/rpcd/vilanet`          | rpcd shim. Bridges ubus → vilanet CLI.                                                           | 0755       |
 | `/www/luci-static/resources/view/vilanet/` | LuCI JS views: `overview.js`, `settings.js`, `servers.js`.                                 | 0644       |
 | `/usr/share/luci/menu.d/luci-app-vilanet.json` | LuCI menu mount.                                                                       | 0644       |
