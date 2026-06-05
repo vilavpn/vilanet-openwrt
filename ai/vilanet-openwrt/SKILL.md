@@ -556,8 +556,8 @@ If you need to write a key outside this list (e.g.
 + `uci commit` over SSH, then `/etc/init.d/vilanet restart`.
 
 `global.log_level` is constrained to `error|warn|info` —
-`info`/`debug`/`trace` are rejected so config details never reach the
-log file.
+`debug`/`trace` and higher are rejected so config details never reach the
+log file. Use `VILANET_DEBUG=1` in the daemon environment for verbose output.
 
 ## On-disk file reference
 
