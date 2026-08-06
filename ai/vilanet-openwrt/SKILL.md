@@ -115,7 +115,7 @@ prebuilt IPKs only.
 
 ### iStore (one-click, recommended on iStoreOS)
 
-Download `vilanet-istore-install_1.0.13.run` from the GitHub releases
+Download `vilanet-istore-install_1.0.33.run` from the GitHub releases
 page. In iStoreOS, open **iStore → Manual Install** and upload the
 `.run` file. Everything installs automatically.
 
@@ -125,11 +125,11 @@ OpenWrt 25.x uses `apk` instead of `opkg`. Download the `.apk` assets
 from the releases page:
 
 ```sh
-scp -O vilanet-core_1.0.13_x86_64.apk      root@<router>:/tmp/
-scp -O luci-app-vilanet_1.0.13_all.apk      root@<router>:/tmp/
+scp -O vilanet-core_1.0.33_x86_64.apk      root@<router>:/tmp/
+scp -O luci-app-vilanet_1.0.33_noarch.apk   root@<router>:/tmp/
 ssh root@<router> 'apk add --allow-untrusted --force-non-repository \
-  /tmp/vilanet-core_1.0.13_x86_64.apk \
-  /tmp/luci-app-vilanet_1.0.13_all.apk'
+  /tmp/vilanet-core_1.0.33_x86_64.apk \
+  /tmp/luci-app-vilanet_1.0.33_noarch.apk'
 ```
 
 Replace arch label as appropriate (same labels as IPK).
@@ -140,12 +140,12 @@ Replace arch label as appropriate (same labels as IPK).
 # Copy IPKs to the router. CHOOSE THE ARCH THAT MATCHES YOUR OUTPUT
 # FROM `opkg print-architecture` — installing a mismatched arch yields
 # "exec format error" at install time.
-scp -O bin/vilanet-core_1.0.13_x86_64.ipk    root@198.51.100.42:/tmp/
-scp -O bin/luci-app-vilanet_1.0.13_all.ipk    root@198.51.100.42:/tmp/
+scp -O bin/vilanet-core_1.0.33_x86_64.ipk    root@198.51.100.42:/tmp/
+scp -O bin/luci-app-vilanet_1.0.33_all.ipk    root@198.51.100.42:/tmp/
 
 ssh root@198.51.100.42 \
-    'opkg install /tmp/vilanet-core_1.0.13_x86_64.ipk \
-                  /tmp/luci-app-vilanet_1.0.13_all.ipk'
+    'opkg install /tmp/vilanet-core_1.0.33_x86_64.ipk \
+                  /tmp/luci-app-vilanet_1.0.33_all.ipk'
 ```
 
 The `vilanet-core` postinst:
@@ -444,7 +444,7 @@ set`. The list is **authoritative** (read from `src/cli.go`'s
 | `global.selected_server`    | string                        | Node id, name, or `auto_<ISO2>` for country-scoped auto.                               |
 | `global.selected_package`   | string                        | Package id or UUID.                                                                    |
 | `global.connection_mode`    | `global` \| `rule` \| `pac`   | `rule` = China-bypass via sing-box ruleset. `pac` is normalised to `rule`; both produce identical sing-box config. |
-| `global.routing_mode`       | `proxy` \| `tun`              | Data path: `proxy` = SOCKS5/HTTP LAN sharing only; `tun` = whole-LAN transparent gateway (all LAN traffic captured via TUN, zero per-device config). Set via `uci set vilanet.global.routing_mode=tun`. |
+| `global.routing_mode`       | `tun` \| `proxy` \| `manual_proxy` | LAN capture mode. `tun` is the default whole-LAN transparent gateway (all LAN traffic captured via TUN, zero per-device config; `settings.gateway_ipv6=1` enables dual-stack capture); `proxy` = Passwall-style IPv4 transparent proxy (TCP REDIRECT + UDP TPROXY); `manual_proxy` = manual SOCKS5/HTTP LAN sharing only. |
 | `network.domain_strategy`   | `ipv4_only` \| `prefer_ipv4` \| `prefer_ipv6` | DNS lookup preference. Default: `ipv4_only`.                            |
 | `network.dns_remote`        | string                        | Tunnel-side DNS (DoH URL or plain IP). Default: `https://1.0.0.1/dns-query`.           |
 | `network.dns_local`         | string                        | Local-side DNS. Default: `223.5.5.5`.                                                  |
@@ -452,15 +452,15 @@ set`. The list is **authoritative** (read from `src/cli.go`'s
 | `network.bypass_lan`        | bool                          | Skip RFC 1918 destinations.                                                            |
 | `network.sniff_enabled`     | bool                          | sing-box inbound sniff.                                                                |
 | `network.mux_enabled`       | bool                          | Connection multiplexing.                                                               |
-| `network.tun_enabled`       | bool                          | Bring up the TUN inbound.                                                              |
+| `network.tun_enabled`       | bool                          | Legacy renderer toggle; runtime whole-router capture is controlled by `global.routing_mode=tun`. |
 | `network.dns_mode`          | `fakeip` \| `real`            | Fake-IP vs. real DNS resolution.                                                       |
 | `network.block_ads`         | bool                          | Apply ad-block ruleset.                                                                |
 | `network.block_porn`        | bool                          | Apply adult-content ruleset.                                                           |
 | `network.block_dot`         | tri-state                     | `true` / `false` / `default` (or `auto` / empty). Block DNS-over-TLS.                  |
 | `network.block_quic`        | tri-state                     | Block UDP-443 / HTTP/3.                                                                |
 | `network.block_stun`        | tri-state                     | Block WebRTC STUN.                                                                    |
-| `proxy.enabled`             | bool                          | Mixed LAN-sharing inbound.                                                             |
-| `proxy.port`                | string (port number)          | Mixed inbound port. Default: `10081`.                                                  |
+| `lan_sharing.enabled`       | bool                          | Manual mixed HTTP/SOCKS LAN-sharing inbound.                                           |
+| `lan_sharing.port`          | string (port number)          | Mixed inbound port. Default: `10081`.                                                  |
 
 ## UCI surface
 
@@ -476,7 +476,7 @@ config credentials 'auth'              # email (password lives in encrypted enve
 config network 'settings'              # domain_strategy, dns_remote, dns_local,
                                         # bypass_china, bypass_lan, enable_ipv6, mtu
 config proxy 'lan_sharing'             # enabled, port, auth_enabled,
-                                        # auth_user, auth_pass, allowed_ips
+                                        # auth_user, auth_pass
 config kill_switch 'kill_switch'       # enabled (G6)
 config hy2 'hy2'                       # speed_mode (off|server_default|custom),
                                         # custom_mbps
@@ -486,9 +486,21 @@ config clash_api 'clash_api'           # enabled, port, secret
 
 **Notes**:
 
-- `proxy.lan_sharing.allowed_ips` is **informational** — the firewall
-  rules in `setup_firewall()` do not enforce a CIDR allowlist yet. Do
-  not promise this works.
+- `proxy.lan_sharing.allowed_ips` **no longer exists.** It was removed
+  outright — it was never enforced by `setup_firewall()`, had no LuCI
+  widget, and was rejected by `vilanet config set`. There is **no**
+  per-source-IP allowlist for LAN sharing; do not promise one.
+  **Response-shape change:** `ubus call vilanet get_config`
+  no longer returns a `lan_sharing.allowed_ips` key — it *did* return
+  one before 5a, so an out-of-tree script that read it must stop. A leftover
+  `option allowed_ips` line in an existing `/etc/config/vilanet` is
+  harmless and is deliberately left in place on upgrade — the package
+  never deletes it — but nothing reads it. A router that still carries a
+  non-empty value logs a `logger -t vilanet` notice at install/upgrade
+  time (visible in `logread`) saying the option is dead.
+  Dropping the field also changes the core settings hash, so the
+  encrypted-config cache is invalidated once on upgrade (regenerated
+  automatically, no operator action).
 - `clash_api.enabled` is `0` by default (the router product is
   headless). Turning it on exposes the clash-mode switch + traffic
   API on `127.0.0.1:<port>`.
@@ -511,11 +523,96 @@ ubus call vilanet get_credentials
 ubus call vilanet get_mode
 ubus call vilanet connect '{"server":"hk-01","package":"<pkg-id>"}'
 ubus call vilanet disconnect
-ubus call vilanet set_mode '{"mode":"rule"}'
+ubus call vilanet set_connection_choices '{"mode":"rule"}'
+ubus call vilanet set_mode '{"mode":"rule"}'   # DEPRECATED — see below
 ubus call vilanet update_config '{"section":"settings","option":"dns_remote","value":"https://1.0.0.1/dns-query"}'
 ubus call vilanet set_credentials '{"email":"you@example.com","password":"<pw>"}'
 ubus call vilanet clear_credentials
 ```
+
+### Setting the connection / routing mode
+
+`set_connection_choices` is the **preferred** writer for both
+`global.connection_mode` and `global.routing_mode`. (`update_config`
+can also write those two keys — it validates them the same way — but it
+is a single-option writer with no before/after comparison, so it
+restarts the service UNCONDITIONALLY and can only set one of the two per
+call. See "update_config allowlist" below.)
+
+```sh
+# connection mode only (routing_mode left exactly as it is)
+ubus call vilanet set_connection_choices '{"mode":"rule"}'
+# both at once
+ubus call vilanet set_connection_choices '{"mode":"global","routing_mode":"tun"}'
+# stage the change without bouncing the service
+ubus call vilanet set_connection_choices '{"mode":"rule","restart":false}'
+```
+
+- `mode`: `global` | `rule` (`pac` is accepted as an alias of `rule`).
+  **Omitting it leaves `connection_mode` unchanged.**
+- `routing_mode`: `tun` | `proxy` | `manual_proxy` (plus the aliases
+  `redirect`/`redir`/`tproxy` → `proxy`, `manual`/`http`/`socks`/`mixed`
+  → `manual_proxy`). **Omitting it leaves `routing_mode` unchanged** —
+  UCI is not written at all, so a stored value that is absent or
+  non-canonical is *not* canonicalized behind your back. The `routing_mode`
+  field in the RESPONSE still reports the canonical form of whatever is
+  stored (that is the value every runtime reader uses); reporting is not
+  persisting.
+- `restart`: default `true`. A restart happens only when a persisted
+  value (`connection_mode` **or** `routing_mode`) ACTUALLY changed *and*
+  `global.enabled=1`.
+- A call that CARRIES a `routing_mode` stamps `global.routing_mode_user_set=1`
+  so the one-shot routing-mode migration never overrides a deliberate
+  choice on a later upgrade. A call that omits `routing_mode` does **not**
+  stamp it — it expressed no routing intent, and stamping would
+  permanently disarm that migration on a pre-v1.0.14 router.
+
+Response:
+```json
+{ "success": true, "changed": true, "restarted": true,
+  "mode": "rule", "routing_mode": "tun" }
+```
+
+#### ⚠️ `set_mode` is DEPRECATED
+
+`ubus call vilanet set_mode '{"mode":"rule"}'` still works, but it is
+deprecated as of **2026-08-06** and will be **removed in a future
+release, no sooner than 90 days after this notice publishes** (earliest
+removal: **2026-11-04**). Every call logs a deprecation warning to syslog
+(`logread | grep set_mode`) — including calls rejected for a missing or
+invalid `mode` — and a successful call returns an additive
+`"deprecated": true` field alongside its `{"success","mode"}` response.
+The addition is backward compatible for any parser that reads fields by
+name; a strict decoder that rejects unknown keys will see the new field.
+
+`set_mode`'s **behaviour is unchanged** for the compat window: it writes
+only `connection_mode`, still restarts the service on every call when
+`global.enabled=1`, still leaves `global.routing_mode` untouched, and
+does **not** stamp `global.routing_mode_user_set`.
+
+Migration — mechanical:
+
+```
+ubus call vilanet set_mode '{"mode":"X"}'
+    ->
+ubus call vilanet set_connection_choices '{"mode":"X"}'
+```
+
+Omitting `routing_mode` leaves it unchanged, which is exactly what
+`set_mode` did. `set_connection_choices` accepts everything `set_mode`
+accepts, but it is not effect-for-effect identical — two differences to
+handle when you migrate:
+
+- **restart policy**: `set_connection_choices` restarts only when a
+  persisted value actually changed, whereas `set_mode` bounces the
+  service on every call. If you were using `set_mode <current mode>` as
+  an apply-and-bounce primitive, call `/etc/init.d/vilanet restart`
+  explicitly instead — the response tells you what happened via
+  `"restarted"`, which `set_mode` never reported;
+- **user-intent marker**: `set_connection_choices` stamps
+  `global.routing_mode_user_set=1` when (and only when) the request
+  carries a `routing_mode`. Sending `{"mode":"X"}` alone stamps nothing,
+  matching `set_mode`.
 
 ### Response shapes (verified against the rpcd shim)
 
@@ -562,12 +659,18 @@ it rolls back `global.enabled=0` and returns
 
 ```
 global.{auto_connect, auto_reconnect, log_level}
+global.{auto_update, update_check_interval}
+global.{connection_mode, routing_mode}       # prefer set_connection_choices
 auth.email
 kill_switch.enabled
 settings.{domain_strategy, dns_remote, dns_local}
 settings.{bypass_china, bypass_lan, enable_ipv6, mtu}
+settings.{block_quic, gateway_ipv6, mss_clamp}
+settings.{block_ads, block_porn, share_diagnostics}
 lan_sharing.{enabled, port, auth_enabled, auth_user, auth_pass}
-domains.entry
+domains.{enabled, gaming_bypass, entry}
+custom_rules.{enabled, proxy_all_apple, proxy_apple_push,
+              download_detour, disabled_default, entry}
 hy2.{speed_mode, custom_mbps}
 ```
 
@@ -575,7 +678,21 @@ Anything else returns
 `{ "error": "writes_not_allowlisted", "section": "...", "option": "..." }`.
 If you need to write a key outside this list (e.g.
 `global.selected_server`), use `uci set vilanet.<section>.<option>=...`
-+ `uci commit` over SSH, then `/etc/init.d/vilanet restart`.
++ `uci commit` over SSH, then `/etc/init.d/vilanet restart`. Do **not**
+hand-write `global.routing_mode` that way: raw `uci` accepts an
+unrecognized token and every reader then falls back to `manual_proxy`
+(i.e. the router silently drops to manual HTTP/SOCKS and LAN clients
+lose VPN routing). Use `set_connection_choices` or `update_config`,
+both of which validate and canonicalize the aliases.
+
+`global.connection_mode` / `global.routing_mode` are writable here for
+LuCI's benefit, but `update_config` restarts the service
+UNCONDITIONALLY on such a write (it is a single-option writer with no
+before/after comparison to gate on). A non-empty `global.routing_mode`
+write does stamp `routing_mode_user_set=1`, same as
+`set_connection_choices`. `set_connection_choices` is still the writer
+to reach for: it validates, canonicalizes aliases, and only restarts on
+a real change.
 
 `global.log_level` is constrained to `error|warn|info` —
 `debug`/`trace` and higher are rejected so config details never reach the
@@ -778,7 +895,7 @@ field names are the source of truth — `connection_state`,
 4. **Always** surface non-zero exit codes verbatim. The CLI's error
    classification is already redacted at the shim layer.
 5. Before destructive UCI changes (`global.connection_mode=global`,
-   `network.tun_enabled=0`, `kill_switch.enabled=1`), confirm intent
+   `global.routing_mode=proxy`, `kill_switch.enabled=1`), confirm intent
    in one sentence.
 6. **`uci set` requires `uci commit`** AND a service restart to take
    effect. `update_config` ubus already does the commit; manual `uci
