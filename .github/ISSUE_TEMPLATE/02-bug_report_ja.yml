@@ -16,7 +16,7 @@ body:
       label: ルーターのアーキテクチャ
       description: "ルーター上で `opkg print-architecture` を実行して確認します。**プレースホルダーのままにせず、必ず手動で選択してください。**"
       options:
-        - "⚠️ アーキテクチャを選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - "⚠️ アーキテクチャを選択してください（未選択のままだと、無効な投稿として扱われ、クローズされます）"
         - x86_64
         - aarch64（arm64）
         - armv7
@@ -29,7 +29,7 @@ body:
     id: openwrt_version
     attributes:
       label: OpenWrt バージョン
-      description: "`cat /etc/openwrt_release` または `ubus call system board` を実行。注意：本プロジェクトは OpenWrt 24.10 以上が必要です。"
+      description: "`cat /etc/openwrt_release` または `ubus call system board` を実行してください。注意：本プロジェクトは OpenWrt 24.10 以上が必要です。"
       placeholder: "例：OpenWrt 24.10.0 r28427"
     validations:
       required: true
@@ -58,7 +58,7 @@ body:
       label: インストール方法
       description: どのようにインストールしましたか？**プレースホルダーのままにせず、必ず手動で選択してください。**
       options:
-        - "⚠️ インストール方法を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - "⚠️ インストール方法を選択してください（未選択のままだと、無効な投稿として扱われ、クローズされます）"
         - opkg で IPK をインストール（vilanet-core + luci-app-vilanet）
         - 手動 scp アップロード + ファイル配置
         - ソースからビルド
@@ -70,9 +70,9 @@ body:
     id: surface
     attributes:
       label: 問題が発生する場所
-      description: どの操作画面で問題が起きますか？**プレースホルダーのままにせず、必ず手動で選択してください。**
+      description: どこで問題が起きますか？**プレースホルダーのままにせず、必ず手動で選択してください。**
       options:
-        - "⚠️ 場所を選択してください（未選択のままは無効な投稿として扱われ、クローズされます）"
+        - "⚠️ 場所を選択してください（未選択のままだと、無効な投稿として扱われ、クローズされます）"
         - LuCI ウェブ画面
         - UCI コマンドライン（uci ...）
         - ubus（ubus call vilanet ...）
@@ -87,7 +87,7 @@ body:
     id: description
     attributes:
       label: 不具合の説明
-      description: 具体的に何が起きましたか？何を目にしましたか？
+      description: 具体的に何が起きましたか？何が見えましたか？
       placeholder: "LuCI の Network → VilaNet で接続を押すと、ステータスがずっと「connecting」のまま……"
     validations:
       required: true
@@ -112,9 +112,9 @@ body:
     id: expected
     attributes:
       label: 期待する動作 vs 実際の動作
-      description: 何が起きると期待し、実際には何が起きましたか？
+      description: 何が起きることを期待していましたか？実際には何が起きましたか？
       placeholder: |
-        期待：接続成功し、ステータスが connected になり、外部にアクセスできる。
+        期待：接続に成功し、ステータスが connected になり、外部にアクセスできる。
         実際：ステータスがずっと connecting で、約 30 秒後に disconnected に戻る。
     validations:
       required: true
